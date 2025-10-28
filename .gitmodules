@@ -1,0 +1,6 @@
+[submodule "Test_SceneSync"]
+	path = Test_SceneSync
+	url = git@github.com:paulviville/Test_SceneSync.git
+[submodule "Test_Network"]
+	path = Test_Network
+	url = git@github.com:paulviville/Test_Network.git
