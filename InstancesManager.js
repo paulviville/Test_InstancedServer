@@ -21,7 +21,7 @@ export default class InstancesManger {
 		this.#instanceUsers[ instance ] = new Set( );
 
 		this.#instancesMap.set( instanceName, instance );
-
+		console.log(this.#instancesMap)
 		return instance;
 	}
 
@@ -40,8 +40,8 @@ export default class InstancesManger {
 
 	instanceUsers ( instance ) {
         console.log( `InstancesManager - instanceUsers ${ instance }` );
-
-		return [ ...this.#instanceUsers[ instance] ];
+		console.log(this.#instanceUsers[ instance ])
+		return [ ...this.#instanceUsers[ instance ] ];
 	}
 
 	*#instancesDataIterator ( ) {

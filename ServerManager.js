@@ -57,7 +57,7 @@ export default class ServerManager {
         console.log( `ServerManager - #handleMessage ${userId}` );
 
 		const messageData = JSON.parse(message);
-		console.log(message)
+		// console.log(message)
 		console.log(messageData)
 
 		const handlerFunction = this.#commandsHandlers[messageData.command];
@@ -87,22 +87,28 @@ export default class ServerManager {
 	/// handle exclusion set
 	#broadcast ( message = { }, excludedId = undefined ) {
 		for ( const userId of this.#usersManager.users( ) ) {
-			if( excludedId !== undefined && client == excludedId ) 
+			if( excludedId !== undefined && userId == excludedId ) 
 				continue;
 
 			this.#usersManager.sockets[ userId ].send( message );
 		}
 	}
 
-	#instanceBroadcast ( message, instance, excludedId = undefined) {
+	#instanceBroadcast ( message = { }, instance, excludedId = undefined) {
+		for ( const userId of this.#instancesManager.instanceUsers( instance ) ) {
+			if( excludedId !== undefined && userId == excludedId ) 
+				continue;
 
+			this.#usersManager.sockets[ userId ].send( message );
+		}
 	}
 
 	#handleNewUser ( socket ) {
         console.log( `ServerManager - #handleNewUser` );
 
 		const userId = this.#usersManager.addUser( );
-		this.#usersManager.sockets[ userId ] = socket;
+		// this.#usersManager.sockets[ userId ] = socket;
+		this.#usersManager.setSocket( userId, socket );
 
 		socket.on( `message`, this.#handleMessage.bind( this, userId ));
 		socket.on( `close`, this.#handleSocketClose.bind( this, userId ));
@@ -128,30 +134,26 @@ export default class ServerManager {
         console.log( `ServerManager - #commandInstanceJoin ${ senderId }` );
 
 		const instanceName = data.instanceName;
-		console.log( instanceName );
 		const instanceId = this.#instancesManager.getInstance( instanceName );
-		console.log(instanceId);
 
 		this.#instancesManager.addUser( instanceId, senderId );
+		this.#usersManager.setInstance( senderId, instanceId );
 
-		console.log(this.#instancesManager.instanceUsers(instanceId));
 		/// send files ?
 		/// check if user has files ?
-		/// broadcast new user to users already in instance
+
+		this.#instanceBroadcast( Messages.newUser( senderId ), instanceId );
 	}
 
 	#commandInstanceLeave ( senderId, data ) {
         console.log( `ServerManager - #commandInstanceLeave ${ senderId }` );
 
 		const instanceName = data.instanceName;
-		console.log( instanceName );
 		const instanceId = this.#instancesManager.getInstance( instanceName );
-		console.log(instanceId);
 
 		this.#instancesManager.removeUser( instanceId, senderId );
+		this.#usersManager.setInstance( senderId, null );
 
-		console.log(this.#instancesManager.instanceUsers(instanceId));
-		/// broadcast remove user to users already in instance
-
+		this.#instanceBroadcast( Messages.removeUser( senderId ), instanceId );
 	}
 }
