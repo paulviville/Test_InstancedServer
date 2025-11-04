@@ -1,4 +1,3 @@
-import { WebSocketServer } from "ws";
 import Commands from "./Test_Network/Commands.js";
 import UsersManager from "./UsersManager.js";
 import InstancesManger from "./InstancesManager.js";
@@ -9,17 +8,19 @@ export default class ServerManager {
 	#serverId = Commands.SERVER_ID;
 	#usersManager = new UsersManager( );
 	#instancesManager = new InstancesManger( );
+	#files = new Map( );
 
 	#commandsHandlers = {
 		[ Commands.INSTANCE_NEW ]: this.#commandInstanceNew.bind( this ),
 		[ Commands.INSTANCE_JOIN ]: this.#commandInstanceJoin.bind( this ),
 		[ Commands.INSTANCE_LEAVE ]: this.#commandInstanceLeave.bind( this ),
+		[ Commands.TRANSFER_FILE ]: this.#commandTransferFile.bind( this ),
 	}
 
-	constructor ( port ) {
-        console.log( `ServerManager - constructor (${port})` );
+	constructor ( server ) {
+        console.log( `ServerManager - constructor` );
 
-		this.#server = new WebSocketServer({ port });
+		this.#server = server;
 		this.#server.on( "listening", this.#handleServerListening.bind(this) );
 		this.#server.on( "connection", this.#handleServerConnection.bind(this) );
 		this.#server.on( "close", this.#handleServerClose.bind(this) );
@@ -84,6 +85,11 @@ export default class ServerManager {
 		this.#handleShutdown( );
 	}
 
+	// #message ( userId, message ) {
+	// 	const socket = this.#usersManager.getSocket( userId );
+	// 	socket.send( message )
+	// }
+
 	/// handle exclusion set
 	#broadcast ( message = { }, excludedId = undefined ) {
 		for ( const userId of this.#usersManager.users( ) ) {
@@ -107,7 +113,6 @@ export default class ServerManager {
         console.log( `ServerManager - #handleNewUser` );
 
 		const userId = this.#usersManager.addUser( );
-		// this.#usersManager.sockets[ userId ] = socket;
 		this.#usersManager.setSocket( userId, socket );
 
 		socket.on( `message`, this.#handleMessage.bind( this, userId ));
@@ -115,8 +120,7 @@ export default class ServerManager {
 
 		socket.send( Messages.setUser( userId ) );
 
-		// console.log( this.#instancesManager.instancesData );
-		const instancesList = this.#instancesManager.instancesData;
+		const instancesList = this.#instancesManager.getInstancesData( [ "name" ] );
 		console.log( instancesList );
 		socket.send( Messages.instancesList( instancesList ) );
 	}
@@ -124,9 +128,13 @@ export default class ServerManager {
 	#commandInstanceNew ( senderId, data ) {
         console.log( `ServerManager - #commandInstanceNew ${ senderId }` );
 
-		this.#instancesManager.newInstance( data.instanceName );
+		const instanceId = this.#instancesManager.newInstance( data.instanceName );
+		const instanceName = this.#instancesManager.getInstanceName( instanceId ); /// quick fix for name collisions
+		const socket = this.#usersManager.getSocket( senderId, instanceName );
+		socket.send( Messages.newInstance( this.#serverId, data.ins) )
 
-		const instancesList = this.#instancesManager.instancesData;
+		const instancesList = this.#instancesManager.getInstancesData( [ "name" ] );
+
 		this.#broadcast( Messages.instancesList( instancesList ) );
 	}
 
@@ -156,4 +164,30 @@ export default class ServerManager {
 
 		this.#instanceBroadcast( Messages.removeUser( senderId ), instanceId );
 	}
+
+	#commandTransferFile ( senderId, data ) {
+        console.log( `ServerManager - #commandInstanceLeave ${ senderId }` );
+
+		this.#files.set( data.fileName, data.file );
+		console.log(this.#files);
+
+		const instanceName = data.instanceName;
+		let instanceId;
+		if ( instanceName ) {
+			instanceId = this.#instancesManager.getInstance( instanceName );
+		} else {
+			instanceId = this.#usersManager.getInstance( senderId );
+		}
+
+		if ( instanceId ) {
+			this.#instancesManager.addFile( instanceId, data.fileName );
+			console.log( instanceId );
+		} else {
+			/// error 
+		}
+		console.log(data.fileName);
+		// this.#instanceBroadcast( Messages.removeUser( senderId ), instanceId );
+	}
+
+
 }

@@ -5,7 +5,15 @@ export default class InstancesManger {
 	#instances = new AttributesContainer( );
 	#instanceName = this.#instances.addAttribute( "name" );
 	#instanceUsers = this.#instances.addAttribute( "users" );
+	#instanceFile = this.#instances.addAttribute( "file" );
 	#instancesMap = new Map( );
+
+	/// alias for data selection
+	#properties = {
+		users: this.#instanceUsers,
+		name: this.#instanceName,
+		fileName: this.#instanceFile,
+	}
 
 	constructor ( ) {
         console.log( `InstancesManager - constructor` );
@@ -17,11 +25,12 @@ export default class InstancesManger {
 
 		const instance = this.#instances.newElement( );
 		this.#instances.ref( instance );
-		this.#instanceName[ instance ] = instanceName;
+		this.#instanceName[ instance ] = `${ instance }_${instanceName}`; /// quick fix for name collisions
 		this.#instanceUsers[ instance ] = new Set( );
+		this.#instanceFile[ instance ] = null;
 
-		this.#instancesMap.set( instanceName, instance );
-		console.log(this.#instancesMap)
+		this.#instancesMap.set( this.#instanceName[ instance ], instance );
+		
 		return instance;
 	}
 
@@ -35,47 +44,48 @@ export default class InstancesManger {
         console.log( `InstancesManager - removeUser ${ instance } ${ user }` );
 
 		this.#instanceUsers[ instance ].delete( user );
-
 	}
 
 	instanceUsers ( instance ) {
         console.log( `InstancesManager - instanceUsers ${ instance }` );
-		console.log(this.#instanceUsers[ instance ])
+
 		return [ ...this.#instanceUsers[ instance ] ];
 	}
 
-	*#instancesDataIterator ( ) {
-		for ( const instance of this.#instances.elements( ) ) {
-			yield {
-				instance: instance,
-				name: this.#instanceName[ instance ],
-				users: this.#instanceUsers[ instance ],
-			}
-		}
+	addFile ( instance, fileName ) {
+        console.log( `InstancesManager - addFile ${ instance }` );
+
+		this.#instanceFile[ instance ] = fileName;
 	}
 
-	*#instancesListIterator ( ) {
-		for ( const instance of this.#instances.elements( ) ) {
-			yield {
-				instance: instance,
-				name: this.#instanceName[ instance ],
-			}
-		}
+	getFile ( instance ) {
+        console.log( `InstancesManager - getFile ${ instance }` );
+
+		return this.#instanceFile[ instance ];
 	}
 
 	getInstance ( name ) {
 		return this.#instancesMap.get( name );
 	}
 
-	get instancesData ( ) {
-        console.log( `InstancesManager - instancesData` );
-
-		return [ ...this.#instancesDataIterator( ) ];
+	getInstanceName ( instance ) {
+		return this.#instanceName[ instance ];
 	}
 
-	get instancesList ( ) {
-        console.log( `InstancesManager - instancesList` );
+	getInstanceData ( instance, dataQuery = [] ) {
+        // console.log( `InstancesManager - getInstanceData` );
 
-		return [ ...this.#instancesListIterator( ) ];
+		const data = { instance };
+		for ( const label of dataQuery ) {
+			data[ label ] = this.#properties[ label ][ instance ];
+		}
+		return data;
+	}
+
+	getInstancesData ( dataQuery = [] ) {
+        // console.log( `InstancesManager - getInstancesData` );
+
+		return Array.from( this.#instances.elements( ), 
+			( instance ) => this.getInstanceData( instance, dataQuery ) );
 	}
 }

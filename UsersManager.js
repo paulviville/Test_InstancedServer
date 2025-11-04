@@ -6,6 +6,11 @@ export default class UsersManager {
     #socket = this.#users.addAttribute( "socket" );
 	#instance = this.#users.addAttribute( "instance" );
 
+	#properties = {
+		socket: this.#socket,
+		instance: this.#instance,
+	}
+
 	constructor ( ) {
         console.log( `UsersManager - constructor` );
 
@@ -52,10 +57,24 @@ export default class UsersManager {
 		return this.#instance[ userId ];
 	}
 
-    *#usersIterator ( ) {
-		for ( const user of this.#users.elements( ) ) {
-			yield user;
+	getUserData ( userId, dataQuery = [] ) {
+		// console.log( `InstancesManager - getUserData` );
+
+		const data = { userId };
+		for ( const label of dataQuery ) {
+			data[ label ] = this.#properties[ label ][ userId ];
 		}
+		return data;
+	}
+
+	getUsersData ( dataQuery = [] ) {
+		// console.log( `InstancesManager - getUsersData` );
+
+		const data = { userId };
+		for ( const label of dataQuery ) {
+			data[ label ] = this.#properties[ label ][ userId ];
+		}
+		return data;
 	}
 
 	*users ( ) {
