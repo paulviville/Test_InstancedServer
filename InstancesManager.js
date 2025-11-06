@@ -8,13 +8,6 @@ export default class InstancesManger {
 	#instanceFile = this.#instances.addAttribute( "file" );
 	#instancesMap = new Map( );
 
-	/// alias for data selection
-	#properties = {
-		users: this.#instanceUsers,
-		name: this.#instanceName,
-		fileName: this.#instanceFile,
-	}
-
 	constructor ( ) {
         console.log( `InstancesManager - constructor` );
 
@@ -77,7 +70,8 @@ export default class InstancesManger {
 
 		const data = { instance };
 		for ( const label of dataQuery ) {
-			data[ label ] = this.#properties[ label ][ instance ];
+			data[ label ] = this.#instances.getAttribute( label )[ instance ];
+			// data[ label ] = this.#properties[ label ][ instance ];
 		}
 		return data;
 	}

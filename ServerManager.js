@@ -2,19 +2,22 @@ import Commands from "./Test_Network/Commands.js";
 import UsersManager from "./UsersManager.js";
 import InstancesManger from "./InstancesManager.js";
 import Messages from "./Test_Network/Messages.js";
+import FilesManager from "./FilesManager.js";
 
 export default class ServerManager {
 	#server;
 	#serverId = Commands.SERVER_ID;
 	#usersManager = new UsersManager( );
 	#instancesManager = new InstancesManger( );
+	#filesManager = new FilesManager( );
 	#files = new Map( );
 
 	#commandsHandlers = {
 		[ Commands.INSTANCE_NEW ]: this.#commandInstanceNew.bind( this ),
 		[ Commands.INSTANCE_JOIN ]: this.#commandInstanceJoin.bind( this ),
 		[ Commands.INSTANCE_LEAVE ]: this.#commandInstanceLeave.bind( this ),
-		[ Commands.TRANSFER_FILE ]: this.#commandTransferFile.bind( this ),
+		[ Commands.FILE_TRANSFER ]: this.#commandFileTransfer.bind( this ),
+		[ Commands.FILE_REQUEST ]: this.#commandFileRequest.bind( this ),
 	}
 
 	constructor ( server ) {
@@ -59,7 +62,7 @@ export default class ServerManager {
 
 		const messageData = JSON.parse(message);
 		// console.log(message)
-		console.log(messageData)
+		// console.log(messageData)
 
 		const handlerFunction = this.#commandsHandlers[messageData.command];
 		if ( handlerFunction ) {
@@ -85,10 +88,10 @@ export default class ServerManager {
 		this.#handleShutdown( );
 	}
 
-	// #message ( userId, message ) {
-	// 	const socket = this.#usersManager.getSocket( userId );
-	// 	socket.send( message )
-	// }
+	#send ( userId, message ) {
+		const socket = this.#usersManager.getSocket( userId );
+		socket.send( message )
+	}
 
 	/// handle exclusion set
 	#broadcast ( message = { }, excludedId = undefined ) {
@@ -123,6 +126,9 @@ export default class ServerManager {
 		const instancesList = this.#instancesManager.getInstancesData( [ "name" ] );
 		console.log( instancesList );
 		socket.send( Messages.instancesList( instancesList ) );
+		const filesList = this.#filesManager.getFilesData( [ "name" ] );
+		console.log( filesList );
+		socket.send( Messages.filesList( filesList ) );
 	}
 
 	#commandInstanceNew ( senderId, data ) {
@@ -165,29 +171,28 @@ export default class ServerManager {
 		this.#instanceBroadcast( Messages.removeUser( senderId ), instanceId );
 	}
 
-	#commandTransferFile ( senderId, data ) {
-        console.log( `ServerManager - #commandInstanceLeave ${ senderId }` );
+	#commandFileTransfer ( senderId, data ) {
+        console.log( `ServerManager - #commandFileTransfer ${ senderId }` );
 
-		this.#files.set( data.fileName, data.file );
-		console.log(this.#files);
+		// this.#files.set( data.fileName, data.file );
 
-		const instanceName = data.instanceName;
-		let instanceId;
-		if ( instanceName ) {
-			instanceId = this.#instancesManager.getInstance( instanceName );
-		} else {
-			instanceId = this.#usersManager.getInstance( senderId );
-		}
-
-		if ( instanceId ) {
-			this.#instancesManager.addFile( instanceId, data.fileName );
-			console.log( instanceId );
-		} else {
-			/// error 
-		}
-		console.log(data.fileName);
-		// this.#instanceBroadcast( Messages.removeUser( senderId ), instanceId );
+		this.#filesManager.addFile( data.fileName, data.file );
+		
+		const filesList = this.#filesManager.getFilesData( [ "name" ] );
+		console.log( filesList );
+		this.#broadcast( Messages.filesList( filesList ) );
 	}
 
+	#commandFileRequest ( senderId, data ) {
+        console.log( `ServerManager - #commandFileRequest ${ senderId }` );
+		
+		console.log( data.fileName );
+		const fileId = this.#filesManager.getFile( data.fileName );
+
+		this.#filesManager.addFile( data.fileName, data.file );
+		
+		const fileData = this.#filesManager.getFileData( fileId, [ "name", "contents" ] );
+		this.#send( senderId, Messages.fileTransfer( senderId, fileData.name, fileData.contents ) );
+	}
 
 }

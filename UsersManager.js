@@ -6,14 +6,8 @@ export default class UsersManager {
     #socket = this.#users.addAttribute( "socket" );
 	#instance = this.#users.addAttribute( "instance" );
 
-	#properties = {
-		socket: this.#socket,
-		instance: this.#instance,
-	}
-
 	constructor ( ) {
         console.log( `UsersManager - constructor` );
-
 	}
 
 	addUser ( ) {
@@ -40,19 +34,19 @@ export default class UsersManager {
 	}
 
 	getSocket ( userId ) {
-        console.log( `UsersManager - getSocket ${ userId }` );
+        // console.log( `UsersManager - getSocket ${ userId }` );
 
 		return this.#socket[ userId ];
 	}
 
 	setInstance ( userId, instanceId ) {
-        console.log( `UsersManager - setInstance ${ userId }` );
+        // console.log( `UsersManager - setInstance ${ userId }` );
 
 		this.#instance[ userId ] = instanceId;
 	}
 
 	getInstance ( userId ) {
-        console.log( `UsersManager - getInstance ${ userId }` );
+        // console.log( `UsersManager - getInstance ${ userId }` );
 
 		return this.#instance[ userId ];
 	}
@@ -62,7 +56,7 @@ export default class UsersManager {
 
 		const data = { userId };
 		for ( const label of dataQuery ) {
-			data[ label ] = this.#properties[ label ][ userId ];
+			data[ label ] = this.#users.getAttribute( label )[ userId ];
 		}
 		return data;
 	}
@@ -70,11 +64,8 @@ export default class UsersManager {
 	getUsersData ( dataQuery = [] ) {
 		// console.log( `InstancesManager - getUsersData` );
 
-		const data = { userId };
-		for ( const label of dataQuery ) {
-			data[ label ] = this.#properties[ label ][ userId ];
-		}
-		return data;
+		return Array.from( this.#users.elements( ), 
+			( user ) => this.getUserData( user, dataQuery ) );
 	}
 
 	*users ( ) {
