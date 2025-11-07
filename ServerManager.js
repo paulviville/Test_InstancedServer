@@ -4,6 +4,17 @@ import InstancesManger from "./InstancesManager.js";
 import Messages from "./Test_Network/Messages.js";
 import FilesManager from "./FilesManager.js";
 
+import { NodeIO } from '@gltf-transform/core';
+import { KHRDracoMeshCompression, EXTTextureWebP } from '@gltf-transform/extensions';
+import draco3d from 'draco3dgltf';
+
+const io = new NodeIO()
+	.registerExtensions([KHRDracoMeshCompression, EXTTextureWebP])
+	.registerDependencies({
+		'draco3d.decoder': await draco3d.createDecoderModule(),
+		'draco3d.encoder': await draco3d.createEncoderModule(),
+	});
+
 export default class ServerManager {
 	#server;
 	#serverId = Commands.SERVER_ID;
@@ -171,12 +182,21 @@ export default class ServerManager {
 		this.#instanceBroadcast( Messages.removeUser( senderId ), instanceId );
 	}
 
-	#commandFileTransfer ( senderId, data ) {
+	async #commandFileTransfer ( senderId, data ) {
         console.log( `ServerManager - #commandFileTransfer ${ senderId }` );
 
 		// this.#files.set( data.fileName, data.file );
-
+		// console.log(data)
 		this.#filesManager.addFile( data.fileName, data.file );
+		// console.log(data.file)
+
+		//////// NEEDS CLEAN UP
+		const fileBuffer = Messages.decodeFile( data.file );
+		const document = await io.readBinary( new Uint8Array( fileBuffer ) );
+		// console.log(file);
+		const gltfData = (await io.writeJSON( document )).json;
+		console.log( gltfData.nodes )
+		////////
 		
 		const filesList = this.#filesManager.getFilesData( [ "name" ] );
 		console.log( filesList );
