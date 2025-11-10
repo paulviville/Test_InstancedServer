@@ -8,6 +8,9 @@ import { NodeIO } from '@gltf-transform/core';
 import { KHRDracoMeshCompression, EXTTextureWebP } from '@gltf-transform/extensions';
 import draco3d from 'draco3dgltf';
 
+import fs from 'fs';
+import path from 'path';
+
 const io = new NodeIO()
 	.registerExtensions([KHRDracoMeshCompression, EXTTextureWebP])
 	.registerDependencies({
@@ -21,7 +24,6 @@ export default class ServerManager {
 	#usersManager = new UsersManager( );
 	#instancesManager = new InstancesManger( );
 	#filesManager = new FilesManager( );
-	#files = new Map( );
 
 	#commandsHandlers = {
 		[ Commands.INSTANCE_NEW ]: this.#commandInstanceNew.bind( this ),
@@ -50,6 +52,7 @@ export default class ServerManager {
 	#handleServerListening ( ) {
         console.log( `ServerManager - #handleServerListening` );
 		
+		this.#filesManager.loadFiles( );
 	}
 
 	#handleServerError ( ) {
@@ -65,7 +68,13 @@ export default class ServerManager {
 	#handleSocketClose ( userId ) {
         console.log( `ServerManager - #handleSocketClose ${userId}` );
 
+		const instanceId = this.#usersManager.getInstance( userId );
+		if ( instanceId ) {
+			this.#instancesManager.removeUser( instanceId, userId );
+			this.#instanceBroadcast( Messages.removeUser( userId ), instanceId );
+		}
 		this.#usersManager.removeUser( userId );
+
 	}
 
 	#handleMessage ( userId, message ) {
@@ -148,7 +157,7 @@ export default class ServerManager {
 		const instanceId = this.#instancesManager.newInstance( data.instanceName );
 		const instanceName = this.#instancesManager.getInstanceName( instanceId ); /// quick fix for name collisions
 		const socket = this.#usersManager.getSocket( senderId, instanceName );
-		socket.send( Messages.newInstance( this.#serverId, data.ins) )
+		socket.send( Messages.newInstance( this.#serverId, data.instanceName ) )
 
 		const instancesList = this.#instancesManager.getInstancesData( [ "name" ] );
 
@@ -187,17 +196,21 @@ export default class ServerManager {
 
 		// this.#files.set( data.fileName, data.file );
 		// console.log(data)
-		this.#filesManager.addFile( data.fileName, data.file );
-		// console.log(data.file)
+
+
 
 		//////// NEEDS CLEAN UP
 		const fileBuffer = Messages.decodeFile( data.file );
+		console.log(fileBuffer)
 		const document = await io.readBinary( new Uint8Array( fileBuffer ) );
 		// console.log(file);
 		const gltfData = (await io.writeJSON( document )).json;
 		console.log( gltfData.nodes )
 		////////
-		
+
+		/// Stores the raw array buffer
+		this.#filesManager.addFile( data.fileName, fileBuffer, true );
+
 		const filesList = this.#filesManager.getFilesData( [ "name" ] );
 		console.log( filesList );
 		this.#broadcast( Messages.filesList( filesList ) );
@@ -209,10 +222,10 @@ export default class ServerManager {
 		console.log( data.fileName );
 		const fileId = this.#filesManager.getFile( data.fileName );
 
-		this.#filesManager.addFile( data.fileName, data.file );
+		// this.#filesManager.addFile( data.fileName, data.file );
 		
 		const fileData = this.#filesManager.getFileData( fileId, [ "name", "contents" ] );
-		this.#send( senderId, Messages.fileTransfer( senderId, fileData.name, fileData.contents ) );
+		this.#send( senderId, Messages.fileTransfer( this.#serverId, fileData.name, Messages.encodeFile( fileData.contents ) ) );
 	}
 
 }

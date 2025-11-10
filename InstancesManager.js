@@ -1,7 +1,6 @@
 import AttributesContainer from "./Test_Network/AttributesContainer.js";
 
 export default class InstancesManger {
-	#users = new Set( );
 	#instances = new AttributesContainer( );
 	#instanceName = this.#instances.addAttribute( "name" );
 	#instanceUsers = this.#instances.addAttribute( "users" );
@@ -25,6 +24,14 @@ export default class InstancesManger {
 		this.#instancesMap.set( this.#instanceName[ instance ], instance );
 		
 		return instance;
+	}
+
+	deleteInstance ( instanceName ) {
+        console.log( `InstancesManager - deleteInstance` );
+		
+		const instance = this.getInstance( instanceName );
+		this.#instances.unref( instance );
+		this.#instancesMap.delete( instanceName );
 	}
 
 	addUser ( instance, user ) {
