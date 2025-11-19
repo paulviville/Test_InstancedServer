@@ -213,7 +213,7 @@ export default class ServerManager {
 
 		const filesList = this.#filesManager.getFilesData( [ "name" ] );
 		console.log( filesList );
-		this.#broadcast( Messages.filesList( filesList ) );
+		// this.#broadcast( Messages.filesList( filesList ) );
 	}
 
 	#commandFileRequest ( senderId, data ) {
